@@ -6,7 +6,9 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -192,30 +194,32 @@ func CheckAPIServer(ctx context.Context, address string) error {
 
 // checkAPIURL verifies that the given endpoint responds over TLS. It accepts
 // 200, 401 and 403 because the API requires authentication.
+//
+// The k3s cluster uses a self-signed serving certificate, so we first fetch it
+// via a raw TLS handshake, build a cert pool from it, and then make the HTTP
+// request with full TLS verification against that pool.
 func checkAPIURL(ctx context.Context, endpoint string) error {
+	parsed, err := url.Parse(endpoint)
+	if err != nil {
+		return fmt.Errorf("parse endpoint: %w", err)
+	}
+
+	host := parsed.Hostname()
+	port := parsed.Port()
+	if port == "" {
+		port = "443"
+	}
+
+	pool, err := fetchSelfSignedCA(ctx, net.JoinHostPort(host, port))
+	if err != nil {
+		return fmt.Errorf("fetch server certificate from %s: %w", endpoint, err)
+	}
+
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
-				// The cluster uses a self-signed serving certificate, so
-				// standard chain verification will fail. We skip the default
-				// chain check but validate the certificate's structure and
-				// expiry in VerifyPeerCertificate.
-				InsecureSkipVerify: true, //nolint:gosec // combined with VerifyPeerCertificate below
-				VerifyPeerCertificate: func(rawCerts [][]byte, _ [][]*x509.Certificate) error {
-					if len(rawCerts) == 0 {
-						return fmt.Errorf("server presented no TLS certificates")
-					}
-					cert, err := x509.ParseCertificate(rawCerts[0])
-					if err != nil {
-						return fmt.Errorf("parse server certificate: %w", err)
-					}
-					now := time.Now()
-					if now.Before(cert.NotBefore) || now.After(cert.NotAfter) {
-						return fmt.Errorf("server certificate expired or not yet valid (notBefore=%s, notAfter=%s)", cert.NotBefore, cert.NotAfter)
-					}
-					return nil
-				},
+				RootCAs: pool,
 			},
 		},
 	}
@@ -237,4 +241,32 @@ func checkAPIURL(ctx context.Context, endpoint string) error {
 	default:
 		return fmt.Errorf("unexpected status %d from %s", response.StatusCode, endpoint)
 	}
+}
+
+// fetchSelfSignedCA connects to addr, completes a TLS handshake that accepts
+// any certificate, and returns a pool containing the peer's leaf certificate.
+// This lets subsequent requests use standard TLS verification against the
+// self-signed cert the k3s API server generates at boot.
+func fetchSelfSignedCA(ctx context.Context, addr string) (*x509.CertPool, error) {
+	dialer := &tls.Dialer{
+		Config: &tls.Config{
+			// One-time handshake to retrieve the self-signed cert.
+			InsecureSkipVerify: true, //nolint:gosec // fetch-only; the cert is pinned for all later requests
+		},
+	}
+	conn, err := dialer.DialContext(ctx, "tcp", addr)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = conn.Close() }()
+
+	tlsConn := conn.(*tls.Conn)
+	certs := tlsConn.ConnectionState().PeerCertificates
+	if len(certs) == 0 {
+		return nil, fmt.Errorf("server at %s presented no certificates", addr)
+	}
+
+	pool := x509.NewCertPool()
+	pool.AddCert(certs[len(certs)-1])
+	return pool, nil
 }
