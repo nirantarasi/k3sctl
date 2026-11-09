@@ -10,7 +10,6 @@ at a YAML file describing your hosts and it will install, upgrade, reconfigure,
 back up and reset the cluster over SSH.
 
 
-
 ## Features
 
 - Declarative cluster configuration (servers and agents in one file)
