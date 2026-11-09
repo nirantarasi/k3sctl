@@ -1,7 +1,9 @@
 package phase
 
-import "strings"
+import (
+	"github.com/nirantarasi/k3sctl/internal/shellutil"
+)
 
 func shellQuote(s string) string {
-	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
+	return shellutil.Quote(s)
 }

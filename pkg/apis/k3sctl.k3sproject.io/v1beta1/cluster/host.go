@@ -17,6 +17,7 @@ import (
 	"github.com/k0sproject/rig/v2/protocol/winrm"
 	"github.com/k0sproject/rig/v2/remotefs"
 	"github.com/nirantarasi/k3sctl/configurer"
+	"github.com/nirantarasi/k3sctl/internal/shellutil"
 	"github.com/nirantarasi/k3sctl/pkg/k8s"
 )
 
@@ -252,7 +253,7 @@ func (h *Host) K3sInstallFlags() Flags {
 }
 
 func shellQuote(s string) string {
-	return "'" + strings.ReplaceAll(s, "'", "'\\''") + "'"
+	return shellutil.Quote(s)
 }
 
 func (h *Host) DrainNode(ctx context.Context, kc k8s.Client, opts *DrainOption) error {

@@ -26,6 +26,7 @@ import (
 	"github.com/canonical/lxd/shared/api"
 
 	"github.com/nirantarasi/k3sctl/integration/environment"
+	"github.com/nirantarasi/k3sctl/internal/shellutil"
 )
 
 const (
@@ -786,5 +787,5 @@ chmod 0440 /etc/sudoers.d/` + user + `
 }
 
 func shellQuote(value string) string {
-	return "'" + strings.ReplaceAll(value, "'", `'\''`) + "'"
+	return shellutil.Quote(value)
 }
