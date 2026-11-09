@@ -38,7 +38,7 @@ func (p *GatherK3sFacts) Run(ctx context.Context) error {
 		// only when the binary or the unit file is actually present; otherwise
 		// `config status` reports a freshly reset host as "stopped".
 		serviceName := h.K3sServiceName()
-		unitPath := fmt.Sprintf("/etc/systemd/system/%s.service", serviceName)
+		unitPath := h.K3sServiceUnitPath()
 		unitInstalled := h.Sudo().FS().FileExist(unitPath)
 
 		h.Metadata.K3sServiceInstalled = binaryInstalled || unitInstalled

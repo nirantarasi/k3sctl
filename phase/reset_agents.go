@@ -75,7 +75,7 @@ func (p *ResetAgents) resetAgent(ctx context.Context, h *cluster.Host) error {
 		}
 	}
 
-	unitPath := fmt.Sprintf("/etc/systemd/system/%s.service", h.K3sServiceName())
+	unitPath := h.K3sServiceUnitPath()
 	if h.Sudo().FS().FileExist(unitPath) {
 		if err := h.Sudo().Exec(fmt.Sprintf("systemctl disable %s", h.K3sServiceName())); err != nil {
 			slog.Warn(fmt.Sprintf("%s: disable service failed: %v", h, err))

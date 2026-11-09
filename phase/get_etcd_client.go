@@ -6,14 +6,9 @@ import (
 
 	"log/slog"
 
+	"github.com/nirantarasi/k3sctl/internal/k3spath"
 	"github.com/nirantarasi/k3sctl/pkg/apis/k3sctl.k3sproject.io/v1beta1/cluster"
 	"github.com/nirantarasi/k3sctl/pkg/etcd"
-)
-
-const (
-	etcdCACertPath     = "/var/lib/rancher/k3s/server/tls/etcd/server-ca.crt"
-	etcdClientCertPath = "/var/lib/rancher/k3s/server/tls/etcd/server-client.crt"
-	etcdClientKeyPath  = "/var/lib/rancher/k3s/server/tls/etcd/server-client.key"
 )
 
 // etcdClientOrBuild returns the existing etcd client from cluster metadata,
@@ -28,17 +23,17 @@ func etcdClientOrBuild(ctx context.Context, existing etcd.Client, h *cluster.Hos
 func buildEtcdClient(ctx context.Context, h *cluster.Host) (etcd.Client, error) {
 	slog.Info(fmt.Sprintf("%s: reading etcd TLS certificates", h))
 
-	caCert, err := h.Sudo().ExecOutput(fmt.Sprintf("cat %s", shellQuote(etcdCACertPath)))
+	caCert, err := h.Sudo().ExecOutput(fmt.Sprintf("cat %s", shellQuote(k3spath.EtcdCACertPath)))
 	if err != nil {
 		return nil, fmt.Errorf("%s: read etcd CA cert: %w", h, err)
 	}
 
-	cert, err := h.Sudo().ExecOutput(fmt.Sprintf("cat %s", shellQuote(etcdClientCertPath)))
+	cert, err := h.Sudo().ExecOutput(fmt.Sprintf("cat %s", shellQuote(k3spath.EtcdClientCertPath)))
 	if err != nil {
 		return nil, fmt.Errorf("%s: read etcd client cert: %w", h, err)
 	}
 
-	key, err := h.Sudo().ExecOutput(fmt.Sprintf("cat %s", shellQuote(etcdClientKeyPath)))
+	key, err := h.Sudo().ExecOutput(fmt.Sprintf("cat %s", shellQuote(k3spath.EtcdClientKeyPath)))
 	if err != nil {
 		return nil, fmt.Errorf("%s: read etcd client key: %w", h, err)
 	}

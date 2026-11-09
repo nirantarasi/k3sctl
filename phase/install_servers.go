@@ -122,7 +122,7 @@ func (p *InstallServers) CleanUp() {
 			_ = svc.Stop(context.Background())
 		}
 
-		unitPath := fmt.Sprintf("/etc/systemd/system/%s.service", h.K3sServiceName())
+		unitPath := h.K3sServiceUnitPath()
 		if h.Sudo().FS().FileExist(unitPath) {
 			_ = h.Sudo().Exec(fmt.Sprintf("systemctl disable %s", h.K3sServiceName()))
 			_ = h.Sudo().FS().Remove(unitPath)
@@ -145,7 +145,7 @@ func (p *InstallServers) installServer(ctx context.Context, h *cluster.Host) err
 
 	installFlags := h.K3sInstallFlags()
 	unitContent := k3sServerUnit(h.Configurer.K3sBinaryPath(), installFlags, h.Environment)
-	unitPath := fmt.Sprintf("/etc/systemd/system/%s.service", h.K3sServiceName())
+	unitPath := h.K3sServiceUnitPath()
 
 	if err := h.Sudo().FS().WriteFile(unitPath, []byte(unitContent), fs.FileMode(0644)); err != nil {
 		return fmt.Errorf("%s: write service unit: %w", h, err)

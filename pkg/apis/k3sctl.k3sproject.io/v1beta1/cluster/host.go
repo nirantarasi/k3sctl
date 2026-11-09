@@ -239,6 +239,10 @@ func (h *Host) K3sServiceName() string {
 	return "k3s-agent"
 }
 
+func (h *Host) K3sServiceUnitPath() string {
+	return fmt.Sprintf("/etc/systemd/system/%s.service", h.K3sServiceName())
+}
+
 func (h *Host) K3sInstallFlags() Flags {
 	flags := make(Flags, 0)
 	flags = append(flags, h.InstallFlags...)

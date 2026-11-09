@@ -73,7 +73,7 @@ func (p *InitializeK3s) installK3sService(h *cluster.Host) error {
 	installFlags := h.K3sInstallFlags()
 
 	unitContent := k3sServerUnit(h.Configurer.K3sBinaryPath(), installFlags, h.Environment)
-	unitPath := fmt.Sprintf("/etc/systemd/system/%s.service", h.K3sServiceName())
+	unitPath := h.K3sServiceUnitPath()
 
 	if err := h.Sudo().FS().WriteFile(unitPath, []byte(unitContent), fs.FileMode(0644)); err != nil {
 		return fmt.Errorf("write service unit: %w", err)

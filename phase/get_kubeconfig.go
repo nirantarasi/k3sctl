@@ -9,7 +9,6 @@ import (
 
 	"github.com/nirantarasi/k3sctl/pkg/apis/k3sctl.k3sproject.io/v1beta1/cluster"
 	"github.com/nirantarasi/k3sctl/pkg/k8s"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 type GetKubeconfig struct {
@@ -76,11 +75,10 @@ func (p *GetKubeconfig) Run(_ context.Context) error {
 	return nil
 }
 
-// WriteKubeconfigToFile writes the kubeconfig to a file using clientcmd.WriteToFile.
 func WriteKubeconfigToFile(kubeconfigYAML string, path string) error {
-	config, err := clientcmd.Load([]byte(kubeconfigYAML))
+	config, err := k8s.ParseKubeconfig([]byte(kubeconfigYAML))
 	if err != nil {
 		return fmt.Errorf("parse kubeconfig: %w", err)
 	}
-	return clientcmd.WriteToFile(*config, path)
+	return k8s.WriteKubeconfigToFile(config, path)
 }

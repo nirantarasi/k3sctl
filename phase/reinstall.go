@@ -77,7 +77,7 @@ func (p *Reinstall) reinstall(ctx context.Context, h *cluster.Host) error {
 			unitContent = k3sAgentUnit(h.Configurer.K3sBinaryPath(), installFlags, h.Environment)
 		}
 
-		unitPath := fmt.Sprintf("/etc/systemd/system/%s.service", h.K3sServiceName())
+		unitPath := h.K3sServiceUnitPath()
 		if err := h.Sudo().FS().WriteFile(unitPath, []byte(unitContent), fs.FileMode(0644)); err != nil {
 			return fmt.Errorf("%s: write service unit: %w", h, err)
 		}
