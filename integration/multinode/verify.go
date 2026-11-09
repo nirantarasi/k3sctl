@@ -3,6 +3,7 @@ package multinode
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -195,8 +196,27 @@ func checkAPIURL(ctx context.Context, endpoint string) error {
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 		Transport: &http.Transport{
-			// The cluster uses a self-signed serving certificate.
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			TLSClientConfig: &tls.Config{
+				// The cluster uses a self-signed serving certificate, so
+				// standard chain verification will fail. We skip the default
+				// chain check but validate the certificate's structure and
+				// expiry in VerifyPeerCertificate.
+				InsecureSkipVerify: true, //nolint:gosec // combined with VerifyPeerCertificate below
+				VerifyPeerCertificate: func(rawCerts [][]byte, _ [][]*x509.Certificate) error {
+					if len(rawCerts) == 0 {
+						return fmt.Errorf("server presented no TLS certificates")
+					}
+					cert, err := x509.ParseCertificate(rawCerts[0])
+					if err != nil {
+						return fmt.Errorf("parse server certificate: %w", err)
+					}
+					now := time.Now()
+					if now.Before(cert.NotBefore) || now.After(cert.NotAfter) {
+						return fmt.Errorf("server certificate expired or not yet valid (notBefore=%s, notAfter=%s)", cert.NotBefore, cert.NotAfter)
+					}
+					return nil
+				},
+			},
 		},
 	}
 

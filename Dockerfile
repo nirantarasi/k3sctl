@@ -20,9 +20,15 @@ RUN go build -trimpath \
 
 FROM alpine:3.20
 
-RUN apk add --no-cache ca-certificates openssh-client tini
+RUN apk add --no-cache ca-certificates openssh-client tini && \
+    addgroup -S k3sctl && adduser -S -G k3sctl k3sctl
 
 COPY --from=builder /out/k3sctl /usr/local/bin/k3sctl
+
+USER k3sctl
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD ["/usr/local/bin/k3sctl", "version"]
 
 ENTRYPOINT ["/sbin/tini", "--", "k3sctl"]
 CMD ["--help"]

@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -71,6 +72,8 @@ type SSHRunner struct {
 	Port    int
 	KeyPath string
 	Timeout time.Duration
+
+	knownHosts sync.Map // address -> ssh.PublicKey (TOFU)
 }
 
 func (s *SSHRunner) Run(ctx context.Context, address, command string) (Result, error) {
@@ -149,11 +152,9 @@ func (s *SSHRunner) connect(ctx context.Context, address string) (*ssh.Client, e
 	}
 
 	config := &ssh.ClientConfig{
-		User: s.User,
-		Auth: []ssh.AuthMethod{ssh.PublicKeys(signer)},
-		// The containers are ephemeral and generate host keys at boot, so
-		// there is nothing stable to pin.
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		User:            s.User,
+		Auth:            []ssh.AuthMethod{ssh.PublicKeys(signer)},
+		HostKeyCallback: s.hostKeyCallback(),
 		Timeout:         timeout,
 	}
 
@@ -170,4 +171,22 @@ func (s *SSHRunner) connect(ctx context.Context, address string) (*ssh.Client, e
 		return nil, err
 	}
 	return ssh.NewClient(clientConn, chans, reqs), nil
+}
+
+// hostKeyCallback returns a trust-on-first-use callback. The first connection
+// to each address records the host key; subsequent connections to the same
+// address reject a different key (MITM detection).
+func (s *SSHRunner) hostKeyCallback() ssh.HostKeyCallback {
+	return func(hostname string, remote net.Addr, key ssh.PublicKey) error {
+		keyBytes := key.Marshal()
+		addr := hostname
+		if stored, ok := s.knownHosts.Load(addr); ok {
+			if !bytes.Equal(stored.(ssh.PublicKey).Marshal(), keyBytes) {
+				return fmt.Errorf("host key mismatch for %s (possible MITM)", addr)
+			}
+			return nil
+		}
+		s.knownHosts.Store(addr, key)
+		return nil
+	}
 }
