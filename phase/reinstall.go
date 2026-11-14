@@ -90,6 +90,10 @@ func (p *Reinstall) reinstall(ctx context.Context, h *cluster.Host) error {
 		return fmt.Errorf("%s: get service: %w", h, err)
 	}
 
+	if h.IsServer() {
+		go reconcileEtcdMemberPeerURL(ctx, h)
+	}
+
 	if err := svc.Restart(ctx); err != nil {
 		return fmt.Errorf("%s: restart service: %w", h, err)
 	}

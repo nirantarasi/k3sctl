@@ -23,6 +23,7 @@ type Member struct {
 // gRPC gateway on a remote host.
 type Client interface {
 	MemberList(ctx context.Context) ([]Member, error)
+	MemberUpdate(ctx context.Context, id uint64, peerURLs []string) error
 	MemberRemove(ctx context.Context, id uint64) error
 	Close() error
 }
@@ -80,6 +81,14 @@ func (c *client) MemberList(ctx context.Context) ([]Member, error) {
 		}
 	}
 	return members, nil
+}
+
+func (c *client) MemberUpdate(ctx context.Context, id uint64, peerURLs []string) error {
+	_, err := c.c.MemberUpdate(ctx, id, peerURLs)
+	if err != nil {
+		return fmt.Errorf("etcd member update %x: %w", id, err)
+	}
+	return nil
 }
 
 func (c *client) MemberRemove(ctx context.Context, id uint64) error {

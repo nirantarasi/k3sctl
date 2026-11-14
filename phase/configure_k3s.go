@@ -71,6 +71,7 @@ func (p *ConfigureK3s) Run(ctx context.Context) error {
 			slog.Info(fmt.Sprintf("%s: config.yaml changed, will restart K3s", h))
 			if h.IsServer() {
 				p.removeSkipFiles(h)
+				reconcileEtcdMemberPeerURL(ctx, h)
 			}
 		}
 

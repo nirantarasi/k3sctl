@@ -48,6 +48,7 @@ func (p *InitializeK3s) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("%s: get service: %w", h, err)
 	}
+	go reconcileEtcdMemberPeerURL(ctx, h)
 	if err := svc.Start(ctx); err != nil {
 		return fmt.Errorf("%s: start service: %w", h, err)
 	}
