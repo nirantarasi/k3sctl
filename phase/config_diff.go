@@ -153,7 +153,7 @@ func (p *ConfigDiff) desiredConfigKeys(h *cluster.Host) map[string]string {
 
 func parseConfigKeys(raw string) map[string]string {
 	result := make(map[string]string)
-	for _, line := range strings.Split(raw, "\n") {
+	for line := range strings.SplitSeq(raw, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue

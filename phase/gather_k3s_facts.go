@@ -55,6 +55,7 @@ func (p *GatherK3sFacts) Run(ctx context.Context) error {
 			if err == nil {
 				h.Metadata.K3sCurrentInstallFlags = parseExecStartFlags(output)
 				h.Metadata.K3sInstallFlagsKnown = true
+				h.Metadata.K3sExistingUnit = output
 			}
 		}
 
@@ -80,7 +81,7 @@ func (p *GatherK3sFacts) Run(ctx context.Context) error {
 }
 
 func parseK3sVersion(output string) string {
-	for _, line := range strings.Split(output, "\n") {
+	for line := range strings.SplitSeq(output, "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "k3s version") {
 			parts := strings.Fields(line)
@@ -96,7 +97,7 @@ func parseK3sVersion(output string) string {
 // ExecStart directive, dropping the binary path and the server/agent subcommand.
 func parseExecStartFlags(unit string) cluster.Flags {
 	flags := cluster.Flags{}
-	for _, line := range strings.Split(unit, "\n") {
+	for line := range strings.SplitSeq(unit, "\n") {
 		line = strings.TrimSpace(line)
 		if !strings.HasPrefix(line, "ExecStart=") {
 			continue

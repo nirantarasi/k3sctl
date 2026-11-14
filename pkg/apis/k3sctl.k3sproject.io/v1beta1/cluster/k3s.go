@@ -358,6 +358,7 @@ func (k *K3s) GenerateServerConfig(host *Host, clusterToken string, isInit bool,
 
 	if host.PrivateAddress != "" {
 		config["node-ip"] = host.PrivateAddress
+		config["advertise-address"] = host.PrivateAddress
 	}
 
 	if isInit {

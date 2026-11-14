@@ -3,7 +3,7 @@ package phase
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -121,7 +121,7 @@ const maxClockSkew = 30 * time.Second
 func medianDuration(values []time.Duration) time.Duration {
 	sorted := make([]time.Duration, len(values))
 	copy(sorted, values)
-	sort.Slice(sorted, func(i, j int) bool { return sorted[i] < sorted[j] })
+	slices.Sort(sorted)
 	return sorted[len(sorted)/2]
 }
 

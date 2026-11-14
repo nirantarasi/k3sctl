@@ -202,6 +202,7 @@ func TestCreateProvisionsAndStartsContainers(t *testing.T) {
 	if !slices.Equal(post.Profiles, []string{"default", "k3sctl-run-1"}) {
 		t.Errorf("profiles = %v, want [default k3sctl-run-1]", post.Profiles)
 	}
+	//nolint:staticcheck // Protocol is deprecated in newer LXD
 	if post.Source.Type != "image" || post.Source.Alias != "24.04" || post.Source.Protocol != "simplestreams" || post.Source.Mode != "pull" {
 		t.Errorf("unexpected image source: %+v", post.Source)
 	}

@@ -1,0 +1,13 @@
+apiVersion: k3sctl.k3sproject.io/v1beta1
+kind: Cluster
+metadata:
+  name: dev
+spec:
+  hosts:
+  - localhost: true
+    role: server
+  k3s:
+    version: ""
+    kubeconfig:
+      path: /etc/rancher/k3s/k3s.yaml
+      mode: "0644"

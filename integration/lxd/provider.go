@@ -350,9 +350,11 @@ func (p *Provider) createInstance(ctx context.Context, name string) error {
 		Name: name,
 		Type: api.InstanceTypeContainer,
 		Source: api.InstanceSource{
-			Type:     "image",
-			Alias:    p.cfg.ImageAlias,
-			Server:   p.cfg.ImageServer,
+			Type:  "image",
+			Alias: p.cfg.ImageAlias,
+			//nolint:staticcheck // Server and Protocol are deprecated in favor of ImageRegistry in newer LXD
+			Server: p.cfg.ImageServer,
+			//nolint:staticcheck
 			Protocol: p.cfg.ImageProtocol,
 			Mode:     "pull",
 		},

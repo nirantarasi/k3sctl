@@ -162,7 +162,7 @@ func TestConfigDiff_ConfigKeyChanges(t *testing.T) {
 	p.Config = &v1beta1.Cluster{Spec: &cluster.Spec{
 		K3s: &cluster.K3s{
 			Version: "v1.30.0+k3s1",
-			Config: map[string]interface{}{
+			Config: map[string]any{
 				"cluster-cidr": "10.42.0.0/16",
 				"service-cidr": "10.44.0.0/16",
 				"new-key":      "new-value",

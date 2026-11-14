@@ -96,6 +96,7 @@ type HostMetadata struct {
 	K3sServiceRunning   bool
 	K3sServiceInstalled bool
 	K3sExistingConfig   string
+	K3sExistingUnit     string
 	// K3sCurrentInstallFlags holds the install flags found in the running
 	// systemd unit. K3sInstallFlagsKnown is false when the unit could not be read.
 	K3sCurrentInstallFlags Flags

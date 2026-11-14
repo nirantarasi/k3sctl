@@ -67,6 +67,19 @@ func (p *ValidateFacts) Run(_ context.Context) error {
 		} else {
 			h.Metadata.NeedsReinstall = false
 		}
+
+		if h.Metadata.K3sServiceRunning && !h.Metadata.NeedsReinstall && h.Metadata.K3sExistingUnit != "" {
+			var desiredUnit string
+			if h.IsServer() {
+				desiredUnit = k3sServerUnit(h.Configurer.K3sBinaryPath(), h.K3sInstallFlags(), h.Environment, hostExecStartPre(h)...)
+			} else {
+				desiredUnit = k3sAgentUnit(h.Configurer.K3sBinaryPath(), h.K3sInstallFlags(), h.Environment, hostExecStartPre(h)...)
+			}
+			if strings.TrimSpace(desiredUnit) != strings.TrimSpace(h.Metadata.K3sExistingUnit) {
+				h.Metadata.NeedsReinstall = true
+				slog.Info(fmt.Sprintf("%s: service unit changed, will reinstall service", h))
+			}
+		}
 	}
 
 	return nil
@@ -96,12 +109,12 @@ func normalizeVersion(v string) string {
 	for len(parts) < 3 {
 		parts = append(parts, "0")
 	}
-	result := ""
+	var result strings.Builder
 	for _, p := range parts {
 		for len(p) < 10 {
 			p = "0" + p
 		}
-		result += p
+		result.WriteString(p)
 	}
-	return result
+	return result.String()
 }

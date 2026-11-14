@@ -72,7 +72,7 @@ func (p *InitializeK3s) Run(ctx context.Context) error {
 func (p *InitializeK3s) installK3sService(h *cluster.Host) error {
 	installFlags := h.K3sInstallFlags()
 
-	unitContent := k3sServerUnit(h.Configurer.K3sBinaryPath(), installFlags, h.Environment)
+	unitContent := k3sServerUnit(h.Configurer.K3sBinaryPath(), installFlags, h.Environment, hostExecStartPre(h)...)
 	unitPath := h.K3sServiceUnitPath()
 
 	if err := h.Sudo().FS().WriteFile(unitPath, []byte(unitContent), fs.FileMode(0644)); err != nil {
@@ -102,10 +102,48 @@ func (p *InitializeK3s) waitForReady(ctx context.Context, h *cluster.Host) error
 		retry.Timeout(5*time.Minute), retry.Interval(10*time.Second))
 }
 
-func k3sServerUnit(binaryPath string, flags []string, env map[string]string) string {
-	execStart := binaryPath + " server"
+func hostExecStartPre(h *cluster.Host) []string {
+	var pre []string
+	if h.Localhost {
+		ips := make(map[string]bool)
+		if h.PrivateAddress != "" && h.PrivateAddress != "localhost" && h.PrivateAddress != "127.0.0.1" {
+			ips[h.PrivateAddress] = true
+		}
+		if h.Metadata.K3sExistingConfig != "" {
+			for line := range strings.SplitSeq(h.Metadata.K3sExistingConfig, "\n") {
+				line = strings.TrimSpace(line)
+				if after, ok := strings.CutPrefix(line, "node-ip:"); ok {
+					val := strings.TrimSpace(after)
+					val = strings.Trim(val, `"'`)
+					if val != "" && val != "localhost" && val != "127.0.0.1" {
+						ips[val] = true
+					}
+				}
+			}
+		}
+		sortedIPs := make([]string, 0, len(ips))
+		for ip := range ips {
+			sortedIPs = append(sortedIPs, ip)
+		}
+		sort.Strings(sortedIPs)
+		for _, ip := range sortedIPs {
+			pre = append(pre, fmt.Sprintf("-/sbin/ip addr add %s/32 dev lo", ip))
+		}
+	}
+	return pre
+}
+
+func k3sServerUnit(binaryPath string, flags []string, env map[string]string, extraExecStartPre ...string) string {
+	var execStart strings.Builder
+	execStart.WriteString(binaryPath + " server")
 	for _, f := range flags {
-		execStart += " " + f
+		execStart.WriteString(" " + f)
+	}
+	var preCommands strings.Builder
+	for _, pre := range extraExecStartPre {
+		if strings.TrimSpace(pre) != "" {
+			fmt.Fprintf(&preCommands, "ExecStartPre=%s\n", pre)
+		}
 	}
 	return fmt.Sprintf(`[Unit]
 Description=K3s - Lightweight Kubernetes
@@ -115,7 +153,7 @@ Wants=network-online.target
 
 [Service]
 Type=notify
-%sExecStartPre=-/sbin/modprobe br_netfilter
+%s%sExecStartPre=-/sbin/modprobe br_netfilter
 ExecStartPre=-/sbin/modprobe overlay
 ExecStart=%s
 KillMode=process
@@ -130,13 +168,20 @@ RestartSec=5s
 
 [Install]
 WantedBy=multi-user.target
-`, systemdEnvironment(env), execStart)
+`, systemdEnvironment(env), preCommands.String(), execStart.String())
 }
 
-func k3sAgentUnit(binaryPath string, flags []string, env map[string]string) string {
-	execStart := binaryPath + " agent"
+func k3sAgentUnit(binaryPath string, flags []string, env map[string]string, extraExecStartPre ...string) string {
+	var execStart strings.Builder
+	execStart.WriteString(binaryPath + " agent")
 	for _, f := range flags {
-		execStart += " " + f
+		execStart.WriteString(" " + f)
+	}
+	var preCommands strings.Builder
+	for _, pre := range extraExecStartPre {
+		if strings.TrimSpace(pre) != "" {
+			fmt.Fprintf(&preCommands, "ExecStartPre=%s\n", pre)
+		}
 	}
 	return fmt.Sprintf(`[Unit]
 Description=K3s Agent - Lightweight Kubernetes
@@ -146,7 +191,7 @@ Wants=network-online.target
 
 [Service]
 Type=exec
-%sExecStart=%s
+%s%sExecStart=%s
 KillMode=process
 Delegate=yes
 LimitNOFILE=1048576
@@ -159,7 +204,7 @@ RestartSec=5s
 
 [Install]
 WantedBy=multi-user.target
-`, systemdEnvironment(env), execStart)
+`, systemdEnvironment(env), preCommands.String(), execStart.String())
 }
 
 // systemdEnvironment renders the cluster's environment variables as

@@ -72,10 +72,7 @@ func quorumSafeBatches(numRunning int, hosts cluster.Hosts) []cluster.Hosts {
 	running := numRunning
 
 	for len(remaining) > 0 {
-		batchSize := quorumBatchSize(running)
-		if batchSize > len(remaining) {
-			batchSize = len(remaining)
-		}
+		batchSize := min(quorumBatchSize(running), len(remaining))
 		batches = append(batches, remaining[:batchSize])
 		remaining = remaining[batchSize:]
 		running += batchSize
@@ -144,7 +141,7 @@ func (p *InstallServers) installServer(ctx context.Context, h *cluster.Host) err
 	slog.Info(fmt.Sprintf("%s: installing K3s server (joining cluster)", h))
 
 	installFlags := h.K3sInstallFlags()
-	unitContent := k3sServerUnit(h.Configurer.K3sBinaryPath(), installFlags, h.Environment)
+	unitContent := k3sServerUnit(h.Configurer.K3sBinaryPath(), installFlags, h.Environment, hostExecStartPre(h)...)
 	unitPath := h.K3sServiceUnitPath()
 
 	if err := h.Sudo().FS().WriteFile(unitPath, []byte(unitContent), fs.FileMode(0644)); err != nil {

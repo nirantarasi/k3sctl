@@ -67,24 +67,22 @@ func (p *Reinstall) reinstall(ctx context.Context, h *cluster.Host) error {
 		}()
 	}
 
-	if h.Metadata.NeedsReinstall {
-		installFlags := h.K3sInstallFlags()
+	installFlags := h.K3sInstallFlags()
 
-		var unitContent string
-		if h.IsServer() {
-			unitContent = k3sServerUnit(h.Configurer.K3sBinaryPath(), installFlags, h.Environment)
-		} else {
-			unitContent = k3sAgentUnit(h.Configurer.K3sBinaryPath(), installFlags, h.Environment)
-		}
+	var unitContent string
+	if h.IsServer() {
+		unitContent = k3sServerUnit(h.Configurer.K3sBinaryPath(), installFlags, h.Environment, hostExecStartPre(h)...)
+	} else {
+		unitContent = k3sAgentUnit(h.Configurer.K3sBinaryPath(), installFlags, h.Environment, hostExecStartPre(h)...)
+	}
 
-		unitPath := h.K3sServiceUnitPath()
-		if err := h.Sudo().FS().WriteFile(unitPath, []byte(unitContent), fs.FileMode(0644)); err != nil {
-			return fmt.Errorf("%s: write service unit: %w", h, err)
-		}
+	unitPath := h.K3sServiceUnitPath()
+	if err := h.Sudo().FS().WriteFile(unitPath, []byte(unitContent), fs.FileMode(0644)); err != nil {
+		return fmt.Errorf("%s: write service unit: %w", h, err)
+	}
 
-		if err := h.Sudo().Exec("systemctl daemon-reload"); err != nil {
-			return fmt.Errorf("%s: daemon-reload: %w", h, err)
-		}
+	if err := h.Sudo().Exec("systemctl daemon-reload"); err != nil {
+		return fmt.Errorf("%s: daemon-reload: %w", h, err)
 	}
 
 	svc, err := h.Sudo().Service(h.K3sServiceName())

@@ -40,10 +40,7 @@ func (p *UpgradeAgents) Run(ctx context.Context) error {
 		concurrency = p.Config.Spec.Options.Concurrency.Limit
 	}
 
-	batchSize := len(p.hosts)
-	if batchSize > concurrency {
-		batchSize = concurrency
-	}
+	batchSize := min(len(p.hosts), concurrency)
 
 	return p.hosts.BatchedParallelEach(ctx, concurrency, batchSize, func(ctx context.Context, h *cluster.Host) error {
 		return p.upgradeAgent(ctx, h)

@@ -28,11 +28,11 @@ func (p *ConfigureRegistries) ShouldRun() bool {
 func (p *ConfigureRegistries) Run(ctx context.Context) error {
 	reg := p.Config.Spec.K3s.Registries
 
-	content := make(map[string]interface{})
+	content := make(map[string]any)
 	if len(reg.Mirrors) > 0 {
-		mirrors := make(map[string]interface{})
+		mirrors := make(map[string]any)
 		for name, mirror := range reg.Mirrors {
-			mirrors[name] = map[string]interface{}{
+			mirrors[name] = map[string]any{
 				"endpoint": mirror.Endpoint,
 			}
 		}
@@ -40,11 +40,11 @@ func (p *ConfigureRegistries) Run(ctx context.Context) error {
 	}
 
 	if len(reg.Configs) > 0 {
-		configs := make(map[string]interface{})
+		configs := make(map[string]any)
 		for name, cfg := range reg.Configs {
-			entry := make(map[string]interface{})
+			entry := make(map[string]any)
 			if cfg.Auth != nil {
-				auth := make(map[string]interface{})
+				auth := make(map[string]any)
 				if cfg.Auth.Username != "" {
 					auth["username"] = cfg.Auth.Username
 				}
@@ -57,7 +57,7 @@ func (p *ConfigureRegistries) Run(ctx context.Context) error {
 				entry["auth"] = auth
 			}
 			if cfg.TLS != nil {
-				tls := make(map[string]interface{})
+				tls := make(map[string]any)
 				if cfg.TLS.CertFile != "" {
 					tls["cert_file"] = cfg.TLS.CertFile
 				}

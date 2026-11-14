@@ -74,9 +74,12 @@ func (l *Linux) K3sCmdf(template string, args ...any) string {
 }
 
 func (l *Linux) PrivateInterface(h Host) (string, error) {
-	output, err := h.ExecOutput("ip -o route show scope link | head -1 | sed -e 's/.* dev //' -e 's/ .*//'")
-	if err != nil {
-		return "", fmt.Errorf("failed to detect private interface: %w", err)
+	output, err := h.ExecOutput("ip -o route show default | head -1 | sed -e 's/.* dev //' -e 's/ .*//'")
+	if err != nil || strings.TrimSpace(output) == "" {
+		output, err = h.ExecOutput("ip -o route show scope link | grep -Ev ' (docker|cni|flannel|veth|lo)' | head -1 | sed -e 's/.* dev //' -e 's/ .*//'")
+		if err != nil {
+			return "", fmt.Errorf("failed to detect private interface: %w", err)
+		}
 	}
 	iface := strings.TrimSpace(output)
 	if iface == "" {
@@ -86,7 +89,7 @@ func (l *Linux) PrivateInterface(h Host) (string, error) {
 }
 
 func (l *Linux) PrivateAddress(h Host, iface, publicIP string) (string, error) {
-	output, err := h.ExecOutput(fmt.Sprintf("ip -o addr show dev %s scope global | awk '{print $4}' | cut -d/ -f1", iface))
+	output, err := h.ExecOutput(fmt.Sprintf("ip -o -4 addr show dev %s scope global | awk '{print $4}' | cut -d/ -f1", iface))
 	if err != nil {
 		return "", fmt.Errorf("failed to get IP for interface %s: %w", iface, err)
 	}

@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/nirantarasi/k3sctl/pkg/apis/k3sctl.k3sproject.io/v1beta1/cluster"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -29,4 +30,29 @@ func TestK3sAgentUnitRendersEnvironment(t *testing.T) {
 
 	assert.True(t, strings.Contains(unit, "Environment=\"FOO=bar\"\n"))
 	assert.True(t, strings.Contains(unit, "ExecStart=/usr/local/bin/k3s agent\n"))
+}
+
+func TestHostExecStartPre_Localhost(t *testing.T) {
+	h := &cluster.Host{
+		Localhost:      true,
+		PrivateAddress: "10.52.64.248",
+		Metadata: cluster.HostMetadata{
+			K3sExistingConfig: "node-ip: \"172.25.223.248\"\ncluster-init: true\n",
+		},
+	}
+
+	pre := hostExecStartPre(h)
+	assert.Contains(t, pre, "-/sbin/ip addr add 10.52.64.248/32 dev lo")
+	assert.Contains(t, pre, "-/sbin/ip addr add 172.25.223.248/32 dev lo")
+
+	unit := k3sServerUnit("/usr/local/bin/k3s", nil, nil, pre...)
+	assert.True(t, strings.Contains(unit, "ExecStartPre=-/sbin/ip addr add 10.52.64.248/32 dev lo\n"))
+	assert.True(t, strings.Contains(unit, "ExecStartPre=-/sbin/ip addr add 172.25.223.248/32 dev lo\n"))
+}
+
+func TestHostExecStartPre_NonLocalhost(t *testing.T) {
+	h := &cluster.Host{
+		PrivateAddress: "10.0.0.5",
+	}
+	assert.Empty(t, hostExecStartPre(h))
 }
